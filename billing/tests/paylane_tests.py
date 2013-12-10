@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 # vim:tabstop=4:expandtab:sw=4:softtabstop=4
-from unittest import skipIf
 
-from django.test import TestCase
 from django.conf import settings
+from django.test import TestCase
+from django.utils.unittest.case import skipIf
 
 from billing.gateway import CardNotSupported
 from billing.utils.credit_card import Visa, CreditCard
@@ -13,6 +13,8 @@ from billing.utils.paylane import *
 from billing.models import PaylaneTransaction, PaylaneAuthorization
 
 #This is needed because Paylane doesn't like too many requests in a very short time
+
+
 THROTTLE_CONTROL_SECONDS = 60
 
 # VISA test card numbers
@@ -105,11 +107,6 @@ class PaylaneTestCase(TestCase):
         self.assertEqual(bill1['status'], 'SUCCESS', unicode(bill1['response']))
         self.assertTrue('transaction' in bill1['response'])
         self.assertTrue('authorization' in bill1['response'])
-
-        bill2 = self.merchant.bill_recurring(12.0, bill1['response']['authorization'], 'OK recurring')
-        self.assertEqual(bill2['status'], 'SUCCESS', unicode(bill2['response']))
-        self.assertTrue('transaction' in bill2['response'])
-        self.assertTrue('authorization' in bill2['response'])
 
     def testRecurringBillingFailWithChargeback(self):
         credit_card = Visa(first_name='Celso', last_name='Pinto', month=10, year=2020, number='4111111111111111', verification_value=435)

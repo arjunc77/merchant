@@ -12,10 +12,13 @@ from app.forms import CreditCardForm
 from app.urls import (authorize_net_obj, google_checkout_obj, world_pay_obj, pay_pal_obj,
                       amazon_fps_obj, fps_recur_obj, braintree_obj,
                       stripe_obj, ogone_obj)
+from app.utils import randomword
 from django.conf import settings
 from django.contrib.sites.models import RequestSite
 from billing.utils.paylane import PaylanePaymentCustomer, \
     PaylanePaymentCustomerAddress
+
+from app.conf import GATEWAY_INITIAL, INTEGRATION_INITIAL
 
 def render(request, template, template_vars={}):
     return render_to_response(template, template_vars, RequestContext(request))
@@ -39,7 +42,7 @@ def authorize(request):
             response = merchant.purchase(amount, credit_card)
             #response = merchant.recurring(amount, credit_card)
     else:
-        form = CreditCardForm(initial={'number': '4222222222222'})
+        form = CreditCardForm(initial=GATEWAY_INITIAL['authorize_net'])
     return render(request, 'app/index.html', {'form': form,
                                               'amount': amount,
                                               'response': response,
@@ -62,11 +65,7 @@ def paypal(request):
             # response = merchant.purchase(amount, credit_card, options={'request': request})
             response = merchant.recurring(amount, credit_card, options={'request': request})
     else:
-        form = CreditCardForm(initial={'number': '4797503429879309',
-                                       'verification_value': '037',
-                                       'month': 1,
-                                       'year': 2019,
-                                       'card_type': 'visa'})
+        form = CreditCardForm(initial=GATEWAY_INITIAL['paypal'])
     return render(request, 'app/index.html', {'form': form,
                                               'amount': amount,
                                               'response': response,
@@ -74,7 +73,7 @@ def paypal(request):
 
 
 def eway(request):
-    amount = 1
+    amount = 100
     response = None
     if request.method == 'POST':
         form = CreditCardForm(request.POST)
@@ -105,10 +104,7 @@ def eway(request):
                                }
             response = merchant.purchase(amount, credit_card, options={'request': request, 'billing_address': billing_address})
     else:
-        form = CreditCardForm(initial={'number':'4444333322221111',
-                                       'verification_value': '000',
-                                       'month': 7,
-                                       'year': 2012})
+        form = CreditCardForm(initial=GATEWAY_INITIAL['eway'])
     return render(request, 'app/index.html', {'form': form,
                                               'amount': amount,
                                               'response': response,
@@ -129,7 +125,8 @@ def braintree(request):
                 response = "Credit Card Not Supported"
             response = merchant.purchase(amount, credit_card)
     else:
-        form = CreditCardForm(initial={'number':'4111111111111111'})
+        form = CreditCardForm(initial=GATEWAY_INITIAL['braintree_payments'])
+
     return render(request, 'app/index.html', {'form': form,
                                               'amount': amount,
                                               'response': response,
@@ -145,7 +142,7 @@ def stripe(request):
             merchant = get_gateway("stripe")
             response = merchant.purchase(amount,credit_card)
     else:
-        form = CreditCardForm(initial={'number':'4242424242424242'})
+        form = CreditCardForm(initial=GATEWAY_INITIAL['stripe'])
     return render(request, 'app/index.html',{'form': form,
                                              'amount':amount,
                                              'response':response,
@@ -176,7 +173,7 @@ def paylane(request):
             options['product'] = {}
             response = merchant.purchase(amount, credit_card, options = options)
     else:
-        form = CreditCardForm(initial={'number':'4111111111111111'})
+        form = CreditCardForm(initial=GATEWAY_INITIAL['paylane'])
     return render(request, 'app/index.html', {'form': form,
                                               'amount':amount,
                                               'response':response,
@@ -234,9 +231,7 @@ def beanstream(request):
                         }
                                           })
     else:
-        form = CreditCardForm(initial={'number':'4030000010001234',
-                                       'card_type': 'visa',
-                                       'verification_value': 123})
+        form = CreditCardForm(initial=GATEWAY_INITIAL['beanstream'])
     return render(request, 'app/index.html',{'form': form,
                                              'amount': amount,
                                              'response': response,
@@ -255,9 +250,7 @@ def chargebee(request):
                                          {"plan_id": "professional",
                                           "description": "Quick Purchase"})
     else:
-        form = CreditCardForm(initial={'number':'4111111111111111',
-                                       'card_type': 'visa',
-                                       'verification_value': 100})
+        form = CreditCardForm(initial=GATEWAY_INITIAL['chargebee'])
     return render(request, 'app/index.html',{'form': form,
                                              'amount': amount,
                                              'response': response,
@@ -438,7 +431,8 @@ def bitcoin(request):
     return render(request, "app/bitcoin.html", {
         "title": "Bitcoin",
         "amount": amount,
-        "address": address
+        "address": address,
+        "settings": settings
     })
 
 def bitcoin_done(request):
@@ -459,7 +453,6 @@ def bitcoin_done(request):
 
 
 def offsite_ogone(request):
-    from utils import randomword
     fields = {
         # Required
         # orderID needs to be unique per transaction.
